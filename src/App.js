@@ -1,25 +1,80 @@
+import React, { Component } from "react";
+
+import { bchjs } from './config';
 import logo from './logo.svg';
 import './App.css';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+class App extends Component {
+  constructor() {
+    super();
+    this.state = {
+      mnemonic: null,
+      hdPath: null,
+      cashAddr: null,
+      legacyAddr: null,
+      slpAddr: null
+    };
+    this.generateWallet = this.generateWallet.bind(this);
+  }
+
+  componentDidMount() {
+    this.generateWallet();
+  }
+
+  async generateWallet(path = "m/44'/145'/0'/0/0") {
+    const mnemonic = bchjs.Mnemonic.generate(
+      128,
+      bchjs.Mnemonic.wordLists()['english']
+    );
+    console.log(mnemonic);
+    console.log(typeof mnemonic);
+
+    const rootSeed = await bchjs.Mnemonic.toSeed(mnemonic);
+    const masterHDNode = bchjs.HDNode.fromSeed(rootSeed, process.env.REACT_APP_NETWORK);
+    const childHDNode = masterHDNode.derivePath(path);
+    const cashAddr = bchjs.HDNode.toCashAddress(childHDNode);
+    const legacyAddr = bchjs.HDNode.toLegacyAddress(childHDNode);
+    const slpAddr = bchjs.SLP.Address.toSLPAddress(cashAddr);
+    await this.setState({
+      mnemonic: mnemonic,
+      hdPath: path,
+      cashAddr: cashAddr,
+      legacyAddr: legacyAddr,
+      slpAddr: slpAddr
+    })
+  }
+
+  render() {
+    return (
+      <div className="App">
+        <header className="App-header">
+          <img src={logo} className="App-logo" alt="logo" />
+          <div>
+            <button onClick={() => this.generateWallet()}>Create Wallet</button>
+          </div>
+          <div>
+            <p>Mnemonic: {this.state.mnemonic}</p>
+            <p>HDPath: {this.state.hdPath}</p>
+            <p>CashAddr: {this.state.cashAddr}</p>
+            <p>LegacyAddr: {this.state.legacyAddr}</p>
+            <p>SLPAddr: {this.state.SLPAddr}</p>
+          </div>
+          <p>
+            Edit <code>src/App.js</code> and save to reload.
+          </p>
+          <p>You are running this application in <b>{process.env.REACT_APP_NETWORK}</b> mode.</p>
+          <a
+            className="App-link"
+            href="https://reactjs.org"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Learn React
+          </a>
+        </header>
+      </div>
+    );
+  }
 }
 
 export default App;
